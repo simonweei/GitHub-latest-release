@@ -1,0 +1,2 @@
+ADMIN_PASSWORD="replace-with-a-long-admin-password"
+MASTER_KEY="replace-with-base64-encoded-32-random-bytes"
