@@ -1,8 +1,0 @@
-name = "github-windows-releases"
-compatibility_date = "2026-09-12"
-pages_build_output_dir = "public"
-
-[[kv_namespaces]]
-binding = "APP_KV"
-# Replace with the namespace ID from: npx wrangler kv namespace create APP_KV
-id = "00000000000000000000000000000000"

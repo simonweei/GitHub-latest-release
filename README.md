@@ -26,15 +26,14 @@ npm run dev
 
 ## 部署到 Cloudflare Pages
 
-1. 登录 Cloudflare 并创建 KV：
+1. 登录 Cloudflare 并创建一个 Pages 项目和 KV 命名空间：
 
    ```sh
    npx wrangler login
    npx wrangler kv namespace create APP_KV
-   npx wrangler pages project create github-windows-releases
    ```
 
-2. 将返回的 KV ID 填入 `wrangler.toml` 的 `kv_namespaces.id`。生产和预览环境应使用不同 KV，避免测试修改生产配置。
+2. 在 Pages 项目的 **Settings → Bindings → Add → KV namespace** 添加绑定，变量名必须为 `APP_KV`，选择刚创建的命名空间。生产和预览环境建议使用不同 KV，避免测试修改生产配置。保存后重新部署。
 3. 在 Pages 项目的 Settings → Variables and Secrets 添加 **Secret**：
    - `ADMIN_PASSWORD`：至少 12 个字符的随机强密码，最多 256 个字符。
    - `MASTER_KEY`：32 个随机字节的 Base64 编码。可在本机运行以下命令生成，再安全保存：
@@ -59,7 +58,9 @@ npm run dev
 
 5. 登录正式站点，在「系统设置」填写 GitHub Token。仅访问公开仓库，使用不包含私有仓库授权的最小权限 Token。随后在「API 密钥」生成调用密钥。
 
-使用 Git 集成时，构建命令设置为 `npm run check`，输出目录为 `public`。不要把 `.build` 作为静态目录；Pages 会编译仓库根目录的 `functions`。
+使用 Git 集成时，构建命令设置为 `npm run build`，输出目录为 `public`，不设置 Deploy command；Pages 会在构建后自动部署并编译仓库根目录的 `functions`。不要把 `.build` 作为静态目录，也不要使用 Workers 的 `npx wrangler deploy`。
+
+仓库不包含 `wrangler.toml`，因此生产 KV、变量和兼容性设置由 Cloudflare Pages 控制台管理。本地 `npm run dev` 使用 Wrangler 的 `--kv=APP_KV` 创建独立本地 KV。
 
 ## 调用 API
 
