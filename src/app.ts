@@ -121,7 +121,7 @@ export async function handle(request: Request, env: Env, next: () => Promise<Res
   const url = new URL(request.url); const path = url.pathname;
   try {
     if (path.startsWith('/api/') || /^\/admin(?:[/.]|$)/i.test(path)) {
-      if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 12 || !env.MASTER_KEY) throw new ApiError(503, 'NOT_CONFIGURED', '请先配置 ADMIN_PASSWORD（至少 12 位）和 MASTER_KEY');
+      if (!env.ADMIN_PASSWORD || env.ADMIN_PASSWORD.length < 6 || !env.MASTER_KEY) throw new ApiError(503, 'NOT_CONFIGURED', '请先配置 ADMIN_PASSWORD（至少 6 位）和 MASTER_KEY');
     }
     if (path.startsWith('/api/') && !['GET', 'HEAD'].includes(request.method)) {
       if (request.headers.get('origin') !== url.origin) throw new ApiError(403, 'INVALID_ORIGIN', '请求来源不允许');

@@ -52,6 +52,14 @@ test('admin page and all secret endpoints require login; static page remains acc
   for (const path of ['/api/admin/settings', '/api/admin/keys', '/api/admin/rules']) assert.equal((await f.request(path)).status, 401);
   assert.equal((await f.request('/')).status, 200);
 });
+test('configuration accepts a six-character admin password and rejects shorter values', async () => {
+  const valid = fixture(); valid.env.ADMIN_PASSWORD = '123456';
+  assert.equal((await valid.request('/api/auth/login', 'POST', { password: '123456' })).status, 200);
+  const invalid = fixture(); invalid.env.ADMIN_PASSWORD = '12345';
+  const response = await invalid.request('/api/auth/login', 'POST', { password: '12345' });
+  assert.equal(response.status, 503);
+  assert.equal((await response.json() as any).error.code, 'NOT_CONFIGURED');
+});
 test('login issues secure cookie, rejects wrong password and locks repeated failures', async () => {
   const f = fixture();
   const ok = await f.request('/api/auth/login', 'POST', { password: f.env.ADMIN_PASSWORD });

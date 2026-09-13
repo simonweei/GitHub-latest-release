@@ -1,2 +1,2 @@
-ADMIN_PASSWORD="replace-with-a-long-admin-password"
+ADMIN_PASSWORD="replace-with-a-password-at-least-6-chars"
 MASTER_KEY="replace-with-base64-encoded-32-random-bytes"

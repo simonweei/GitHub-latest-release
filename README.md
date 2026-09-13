@@ -35,7 +35,7 @@ npm run dev
 
 2. 在 Pages 项目的 **Settings → Bindings → Add → KV namespace** 添加绑定，变量名必须为 `APP_KV`，选择刚创建的命名空间。生产和预览环境建议使用不同 KV，避免测试修改生产配置。保存后重新部署。
 3. 在 Pages 项目的 Settings → Variables and Secrets 添加 **Secret**：
-   - `ADMIN_PASSWORD`：至少 12 个字符的随机强密码，最多 256 个字符。
+   - `ADMIN_PASSWORD`：至少 6 个字符，最多 256 个字符。建议生产环境仍使用较长的随机密码。
    - `MASTER_KEY`：32 个随机字节的 Base64 编码。可在本机运行以下命令生成，再安全保存：
 
      ```sh
