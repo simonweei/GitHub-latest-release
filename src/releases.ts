@@ -43,7 +43,7 @@ export function selectAsset(assets: Asset[], arch: Arch, pattern?: string): Asse
     const windows = /(?:windows|win32|win64|(?:^|[._-])win(?:[._-]|$))/.test(n);
     const unmarkedArchive = !hasNamedPlatforms && found === arch;
     // Unmarked executables are a common Windows x64 default (for example Joplin-Setup.exe).
-    if (!(found === arch && (executable || windows || unmarkedArchive)) && !(arch === 'x64' && !found && executable)) return [];
+    if (!(found === arch && (executable || windows || unmarkedArchive)) && !(arch === 'x64' && !found && (executable || windows))) return [];
     let score = n.endsWith('.exe') ? 0 : n.endsWith('.msi') ? 10 : /\.(msix|msixbundle|appx|appxbundle)$/.test(n) ? 12 : 20;
     if (/(?:setup|installer)/.test(n)) score -= 3;
     if (!found) score += 30;

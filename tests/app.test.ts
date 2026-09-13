@@ -200,5 +200,6 @@ test('real-world Windows naming conventions select the primary package', () => {
   assert.equal(selectAsset([asset('ripgrep-x86_64-pc-windows-gnu.zip'), asset('ripgrep-x86_64-pc-windows-msvc.zip')], 'x64').name, 'ripgrep-x86_64-pc-windows-msvc.zip');
   assert.equal(selectAsset([asset('transmission-qt5-x64.msi'), asset('transmission-x64.msi')], 'x64').name, 'transmission-x64.msi');
   assert.equal(selectAsset([asset('ventoy-windows-64bit.zip'), asset('ventoy-win-32bit.zip')], 'x64').name, 'ventoy-windows-64bit.zip');
+  assert.equal(selectAsset([asset('ventoy-windows.zip'), asset('ventoy-linux.tar.gz')], 'x64').name, 'ventoy-windows.zip');
   assert.equal(selectAsset([asset('Microsoft.DesktopAppInstaller.msixbundle')], 'x64').name, 'Microsoft.DesktopAppInstaller.msixbundle');
 });
