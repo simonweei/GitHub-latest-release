@@ -62,6 +62,8 @@ npm run dev
 
 仓库不包含 `wrangler.toml`，因此生产 KV、变量和兼容性设置由 Cloudflare Pages 控制台管理。本地 `npm run dev` 使用 Wrangler 的 `--kv=APP_KV` 创建独立本地 KV。
 
+不要在 Cloudflare 控制台使用“拖放文件”部署本项目：该方式只上传静态资源，不会编译 `functions`，登录和 API 都将不可用。如需从本机直接上传，请在仓库根目录运行 `npm ci` 后执行 `npm run deploy`；Wrangler 会同时上传 `public` 和编译后的 Pages Functions。控制台中的 `APP_KV`、`ADMIN_PASSWORD` 和 `MASTER_KEY` 绑定仍需提前配置。
+
 ## 调用 API
 
 ```sh

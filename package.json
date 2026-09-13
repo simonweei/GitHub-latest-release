@@ -11,7 +11,7 @@
     "test:smoke": "node scripts/smoke.mjs",
     "build": "wrangler pages functions build functions --outdir .build",
     "check": "npm run typecheck && npm test && npm run build",
-    "deploy": "wrangler pages deploy public --project-name github-windows-releases"
+    "deploy": "wrangler pages deploy public --project-name github-latest-release"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260911.1",
