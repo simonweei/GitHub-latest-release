@@ -1,7 +1,8 @@
 const password = document.querySelector('#password');
 document.querySelector('#toggle').addEventListener('click', event => {
   const shown = password.type === 'password'; password.type = shown ? 'text' : 'password';
-  event.target.textContent = shown ? '隐藏' : '显示'; event.target.setAttribute('aria-pressed', String(shown));
+  const button = event.currentTarget; button.classList.toggle('revealed', shown);
+  button.setAttribute('aria-label', shown ? '隐藏管理员密码' : '显示管理员密码'); button.setAttribute('aria-pressed', String(shown));
 });
 document.querySelector('#login-form').addEventListener('submit', async event => {
   event.preventDefault(); const button = event.submitter; button.disabled = true;

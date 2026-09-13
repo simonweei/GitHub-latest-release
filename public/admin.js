@@ -9,7 +9,8 @@ async function api(path, method = 'GET', payload) {
 }
 function action(fn) { return async event => { event.preventDefault(); $('#notice').hidden = true; const button = event.submitter || (event.currentTarget instanceof HTMLButtonElement ? event.currentTarget : null); if (button) button.disabled = true; try { await fn(event); } catch (error) { notice(error.message || '网络连接失败，请重试', true); } finally { if (button) button.disabled = false; } }; }
 function clearSecrets() { for (const id of ['#signing-key', '#github-token', '#new-key']) $(id).value = ''; $('#created-key').hidden = true; }
-function hideSecrets() { for (const button of document.querySelectorAll('.toggle-secret')) { document.getElementById(button.dataset.target).type = 'password'; button.textContent = '显示'; button.setAttribute('aria-pressed', 'false'); } }
+function secretName(button) { return button.dataset.target === 'github-token' ? 'GitHub Token' : '会话签名密钥'; }
+function hideSecrets() { for (const button of document.querySelectorAll('.toggle-secret')) { document.getElementById(button.dataset.target).type = 'password'; button.classList.remove('revealed'); button.setAttribute('aria-label', `显示${secretName(button)}`); button.setAttribute('aria-pressed', 'false'); } }
 window.addEventListener('pagehide', clearSecrets);
 window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
 let panelEpoch = 0;
@@ -22,7 +23,7 @@ for (const tab of document.querySelectorAll('.tab')) tab.addEventListener('click
   if (tab.dataset.panel === 'settings') { const data = await api('/api/admin/settings'); if (epoch !== panelEpoch) return; $('#signing-key').value = data.signingKey; $('#github-token').value = data.githubToken; }
 }));
 $('#logout').addEventListener('click', action(async () => { await api('/api/auth/logout', 'POST'); clearSecrets(); location.replace('/'); }));
-for (const button of document.querySelectorAll('.toggle-secret')) button.addEventListener('click', () => { const input = document.getElementById(button.dataset.target); const visible = input.type === 'password'; input.type = visible ? 'text' : 'password'; button.textContent = visible ? '隐藏' : '显示'; button.setAttribute('aria-pressed', String(visible)); });
+for (const button of document.querySelectorAll('.toggle-secret')) button.addEventListener('click', () => { const input = document.getElementById(button.dataset.target); const visible = input.type === 'password'; input.type = visible ? 'text' : 'password'; button.classList.toggle('revealed', visible); button.setAttribute('aria-label', `${visible ? '隐藏' : '显示'}${secretName(button)}`); button.setAttribute('aria-pressed', String(visible)); });
 $('#generate-signing').addEventListener('click', () => { $('#signing-key').value = btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32)))).replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, ''); });
 $('#settings-form').addEventListener('submit', action(async () => { const data = await api('/api/admin/settings', 'PUT', { signingKey: $('#signing-key').value, githubToken: $('#github-token').value }); hideSecrets(); if (data.relogin) { clearSecrets(); location.replace('/'); } else notice('设置已保存。跨地区生效可能需要 60 秒或更久。'); }));
 $('#resolve-form').addEventListener('submit', action(async event => {
