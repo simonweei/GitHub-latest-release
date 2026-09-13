@@ -31,23 +31,25 @@ export function selectAsset(assets: Asset[], arch: Arch, pattern?: string): Asse
   const hasNamedPlatforms = assets.some(asset => /(?:linux|darwin|macos|osx|android|windows|win32|win64)/i.test(asset.name));
   const candidates = assets.flatMap(asset => {
     const n = asset.name.toLowerCase();
-    if (!/\.(exe|msi|zip)$/.test(n) || /(?:^|[._-])(symbols?|debug|pdbs?|checksums?|sha\d+|blockmap|sources?|delta|patch)(?:[._-]|$)/.test(n)) return [];
+    if (!/\.(exe|msi|msix|msixbundle|appx|appxbundle|zip)$/.test(n) || /(?:^|[._-])(symbols?|debug|pdbs?|checksums?|sha\d+|blockmap|sources?|delta|patch)(?:[._-]|$)/.test(n)) return [];
     if (/(?:linux|darwin|macos|osx|android|appimage)/.test(n)) return [];
     const normalized = n.replaceAll('_', '-');
     const found: Arch | undefined = /(?:arm[-_]?64|arm64ec|aarch64)/.test(normalized) ? 'arm64'
-      : /(?:x86[-_]64|amd64|x64|win64|windows-64)/.test(normalized) ? 'x64'
-      : /(?:^|[.-])(?:x86|ia32|i[3-6]86|386|win32|windows-86)(?:[.-]|$)/.test(normalized) ? 'x86' : undefined;
+      : /(?:x86[-_]64|amd64|x64|win64|windows-64|(?:^|[.-])64[-]?bit(?:[.-]|$))/.test(normalized) ? 'x64'
+      : /(?:^|[.-])(?:x86|ia32|i[3-6]86|386|win32|windows-86|32[-]?bit)(?:[.-]|$)/.test(normalized) ? 'x86' : undefined;
     if (found && found !== arch) return [];
     if (pattern) return glob(pattern, asset.name) ? [{ asset, score: 0 }] : [];
-    const executable = /\.(exe|msi)$/.test(n);
+    const executable = /\.(exe|msi|msix|msixbundle|appx|appxbundle)$/.test(n);
     const windows = /(?:windows|win32|win64|(?:^|[._-])win(?:[._-]|$))/.test(n);
     const unmarkedArchive = !hasNamedPlatforms && found === arch;
     // Unmarked executables are a common Windows x64 default (for example Joplin-Setup.exe).
     if (!(found === arch && (executable || windows || unmarkedArchive)) && !(arch === 'x64' && !found && executable)) return [];
-    let score = n.endsWith('.exe') ? 0 : n.endsWith('.msi') ? 10 : 20;
+    let score = n.endsWith('.exe') ? 0 : n.endsWith('.msi') ? 10 : /\.(msix|msixbundle|appx|appxbundle)$/.test(n) ? 12 : 20;
     if (/(?:setup|installer)/.test(n)) score -= 3;
     if (!found) score += 30;
-    if (/(?:unsigned|portable|(?:^|[.-])cli(?:[.-]|$)|(?:^|[._-])lite(?:[._-]|$)|legacy|fixed[_-]?webview|(?:^|[._-])desktop(?:[._-]|$))/.test(normalized)) score += 15;
+    if (/(?:unsigned|portable|min[-_]?git|(?:^|[.-])cli(?:[.-]|$)|(?:^|[._-])lite(?:[._-]|$)|legacy|preview|fixed[_-]?webview|(?:^|[._-])desktop(?:[._-]|$)|(?:^|[._-])gnu(?:[._-]|$)|(?:^|[._-])qt5(?:[._-]|$)|(?:^|[._-])lt20(?:[._-]|$))/.test(normalized)) score += 15;
+    // When variants are otherwise equivalent, the least-qualified filename is normally the primary build.
+    score += n.length / 1000;
     return [{ asset, score }];
   });
   const bestScore = Math.min(...candidates.map(item => item.score));

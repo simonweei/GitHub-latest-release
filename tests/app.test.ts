@@ -194,4 +194,11 @@ test('real-world Windows naming conventions select the primary package', () => {
   assert.equal(selectAsset([asset('OBS-Windows-arm64-PDBs.zip'), asset('OBS-Windows-arm64.zip')], 'arm64').name, 'OBS-Windows-arm64.zip');
   assert.equal(selectAsset([asset('LocalSend-windows-x86-64-unsigned.exe'), asset('LocalSend-windows-x86-64.exe'), asset('LocalSend-CLI-windows-x86-64.exe')], 'x64').name, 'LocalSend-windows-x86-64.exe');
   assert.equal(selectAsset([asset('Joplin-Setup.exe'), asset('JoplinPortable.exe'), asset('Joplin-arm64.zip'), asset('Joplin-mac.zip')], 'x64').name, 'Joplin-Setup.exe');
+  assert.equal(selectAsset([asset('PowerToysSetup-x64.exe'), asset('PowerToysUserSetup-x64.exe')], 'x64').name, 'PowerToysSetup-x64.exe');
+  assert.equal(selectAsset([asset('rufus.exe'), asset('rufus-p.exe')], 'x64').name, 'rufus.exe');
+  assert.equal(selectAsset([asset('qbittorrent_lt20_x64_setup.exe'), asset('qbittorrent_x64_setup.exe')], 'x64').name, 'qbittorrent_x64_setup.exe');
+  assert.equal(selectAsset([asset('ripgrep-x86_64-pc-windows-gnu.zip'), asset('ripgrep-x86_64-pc-windows-msvc.zip')], 'x64').name, 'ripgrep-x86_64-pc-windows-msvc.zip');
+  assert.equal(selectAsset([asset('transmission-qt5-x64.msi'), asset('transmission-x64.msi')], 'x64').name, 'transmission-x64.msi');
+  assert.equal(selectAsset([asset('ventoy-windows-64bit.zip'), asset('ventoy-win-32bit.zip')], 'x64').name, 'ventoy-windows-64bit.zip');
+  assert.equal(selectAsset([asset('Microsoft.DesktopAppInstaller.msixbundle')], 'x64').name, 'Microsoft.DesktopAppInstaller.msixbundle');
 });
