@@ -149,15 +149,15 @@ test('private repositories never expose releases even with a privileged token', 
   const f = fixture(); f.setPrivate(); const cookie = await f.login();
   assert.equal((await f.request('/api/admin/resolve?repo=test/app', 'POST', undefined, { cookie })).status, 404); assert.equal(f.calls(), 1);
 });
-test('admin force refresh bypasses cache; rules apply to existing cached assets', async () => {
+test('admin force refresh bypasses cache; rules can override automatic preference', async () => {
   const f = fixture(); const cookie = await f.login(); f.assets.push({ ...f.assets[0], name: 'App-win-x64-portable.exe' });
   const path = '/api/admin/resolve?repo=test/app';
-  assert.equal((await f.request(path, 'POST', undefined, { cookie })).status, 409);
+  assert.equal((await (await f.request(path, 'POST', undefined, { cookie })).json() as any).filename, 'App-win-x64.exe');
   await f.request('/api/admin/rules', 'PUT', { repo: 'Test/App', patterns: { x64: '*portable.exe' } }, { cookie });
   assert.equal((await (await f.request(path, 'POST', undefined, { cookie })).json() as any).filename, 'App-win-x64-portable.exe'); assert.equal(f.calls(), 2);
   assert.equal((await f.request(path + '&refresh=1', 'POST', undefined, { cookie })).status, 200); assert.equal(f.calls(), 4);
   await f.request('/api/admin/rules?repo=test/app', 'DELETE', undefined, { cookie });
-  assert.equal((await f.request(path, 'POST', undefined, { cookie })).status, 409);
+  assert.equal((await (await f.request(path, 'POST', undefined, { cookie })).json() as any).filename, 'App-win-x64.exe');
 });
 test('sensitive endpoints reject unsupported methods and excessive body', async () => {
   const f = fixture(); const cookie = await f.login();
@@ -179,9 +179,19 @@ test('selection distinguishes architectures, installer type, symbols and source 
   assert.equal(selectAsset([asset('app-windows-x86_64.zip')], 'x64').name, 'app-windows-x86_64.zip');
 });
 test('unknown architecture needs explicit rule; ambiguous assets never guessed', () => {
-  assert.throws(() => selectAsset([asset('setup.exe')], 'x64'), /没有/);
+  assert.equal(selectAsset([asset('setup.exe')], 'x64').name, 'setup.exe');
   assert.equal(selectAsset([asset('setup.exe')], 'x64', 'setup.exe').name, 'setup.exe');
   assert.throws(() => selectAsset([asset('a-win-x64.exe'), asset('b-win-x64.exe')], 'x64'), /多个/);
   assert.throws(() => selectAsset([asset('app-arm64.exe')], 'x64', '*'), /没有/);
   assert.throws(() => selectAsset([asset('source.zip')], 'x64', '*'), /没有/);
+});
+test('real-world Windows naming conventions select the primary package', () => {
+  assert.equal(selectAsset([asset('v2rayN-windows-64-desktop.zip'), asset('v2rayN-windows-64.zip')], 'x64').name, 'v2rayN-windows-64.zip');
+  assert.equal(selectAsset([asset('v2rayN-windows-86.zip')], 'x86').name, 'v2rayN-windows-86.zip');
+  assert.equal(selectAsset([asset('TrafficMonitor_x64.zip'), asset('TrafficMonitor_x64_Lite.zip')], 'x64').name, 'TrafficMonitor_x64.zip');
+  assert.equal(selectAsset([asset('TrafficMonitor_arm64ec.zip')], 'arm64').name, 'TrafficMonitor_arm64ec.zip');
+  assert.equal(selectAsset([asset('Clash_x64-setup.exe'), asset('Clash_x64_fixed_webview2-setup.exe')], 'x64').name, 'Clash_x64-setup.exe');
+  assert.equal(selectAsset([asset('OBS-Windows-arm64-PDBs.zip'), asset('OBS-Windows-arm64.zip')], 'arm64').name, 'OBS-Windows-arm64.zip');
+  assert.equal(selectAsset([asset('LocalSend-windows-x86-64-unsigned.exe'), asset('LocalSend-windows-x86-64.exe'), asset('LocalSend-CLI-windows-x86-64.exe')], 'x64').name, 'LocalSend-windows-x86-64.exe');
+  assert.equal(selectAsset([asset('Joplin-Setup.exe'), asset('JoplinPortable.exe'), asset('Joplin-arm64.zip'), asset('Joplin-mac.zip')], 'x64').name, 'Joplin-Setup.exe');
 });

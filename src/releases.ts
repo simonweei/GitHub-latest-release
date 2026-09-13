@@ -28,20 +28,30 @@ function glob(pattern: string, name: string) {
   return new RegExp(`^${expression}$`, 'i').test(name);
 }
 export function selectAsset(assets: Asset[], arch: Arch, pattern?: string): Asset {
-  const candidates = assets.filter(asset => {
+  const hasNamedPlatforms = assets.some(asset => /(?:linux|darwin|macos|osx|android|windows|win32|win64)/i.test(asset.name));
+  const candidates = assets.flatMap(asset => {
     const n = asset.name.toLowerCase();
-    if (!/\.(exe|msi|zip)$/.test(n) || /(?:^|[._-])(symbols?|debug|pdb|checksums?|sha\d+|blockmap|source|delta|patch)(?:[._-]|$)/.test(n)) return false;
-    if (/(?:linux|darwin|macos|osx|android|appimage)/.test(n)) return false;
-    const found: Arch | undefined = /(?:arm64|aarch64)/.test(n) ? 'arm64' : /(?:x86_64|amd64|x64|win64)/.test(n) ? 'x64' : /(?:\bx86\b|ia32|i[3-6]86|win32)/.test(n.replaceAll('_', '-')) ? 'x86' : undefined;
-    if (found && found !== arch) return false;
-    if (pattern) return glob(pattern, asset.name);
-    // Unknown architectures need an explicit rule; never silently label an x86 binary x64.
-    if (found !== arch) return false;
-    return /\.(exe|msi)$/.test(n) || /(?:windows|win32|win64|(?:^|[._-])win(?:[._-]|$))/.test(n);
+    if (!/\.(exe|msi|zip)$/.test(n) || /(?:^|[._-])(symbols?|debug|pdbs?|checksums?|sha\d+|blockmap|sources?|delta|patch)(?:[._-]|$)/.test(n)) return [];
+    if (/(?:linux|darwin|macos|osx|android|appimage)/.test(n)) return [];
+    const normalized = n.replaceAll('_', '-');
+    const found: Arch | undefined = /(?:arm[-_]?64|arm64ec|aarch64)/.test(normalized) ? 'arm64'
+      : /(?:x86[-_]64|amd64|x64|win64|windows-64)/.test(normalized) ? 'x64'
+      : /(?:^|[.-])(?:x86|ia32|i[3-6]86|386|win32|windows-86)(?:[.-]|$)/.test(normalized) ? 'x86' : undefined;
+    if (found && found !== arch) return [];
+    if (pattern) return glob(pattern, asset.name) ? [{ asset, score: 0 }] : [];
+    const executable = /\.(exe|msi)$/.test(n);
+    const windows = /(?:windows|win32|win64|(?:^|[._-])win(?:[._-]|$))/.test(n);
+    const unmarkedArchive = !hasNamedPlatforms && found === arch;
+    // Unmarked executables are a common Windows x64 default (for example Joplin-Setup.exe).
+    if (!(found === arch && (executable || windows || unmarkedArchive)) && !(arch === 'x64' && !found && executable)) return [];
+    let score = n.endsWith('.exe') ? 0 : n.endsWith('.msi') ? 10 : 20;
+    if (/(?:setup|installer)/.test(n)) score -= 3;
+    if (!found) score += 30;
+    if (/(?:unsigned|portable|(?:^|[.-])cli(?:[.-]|$)|(?:^|[._-])lite(?:[._-]|$)|legacy|fixed[_-]?webview|(?:^|[._-])desktop(?:[._-]|$))/.test(normalized)) score += 15;
+    return [{ asset, score }];
   });
-  const ranked = candidates.map(asset => ({ asset, rank: pattern ? 0 : asset.name.toLowerCase().endsWith('.exe') ? 0 : asset.name.toLowerCase().endsWith('.msi') ? 1 : 2 }));
-  const bestRank = Math.min(...ranked.map(item => item.rank));
-  const best = ranked.filter(item => item.rank === bestRank);
+  const bestScore = Math.min(...candidates.map(item => item.score));
+  const best = candidates.filter(item => item.score === bestScore);
   if (!best.length) throw new ApiError(404, 'NO_WINDOWS_ASSET', '最新正式版没有可明确匹配的 Windows 文件，请在管理页面配置规则', { candidates: assets.map(a => a.name) });
   if (best.length > 1) throw new ApiError(409, 'AMBIGUOUS_ASSET', '多个文件匹配，请配置更精确的项目规则', { candidates: best.map(item => item.asset.name) });
   return best[0].asset;
