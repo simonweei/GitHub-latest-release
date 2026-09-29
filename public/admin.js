@@ -39,14 +39,14 @@ async function loadRules() { const data = await api('/api/admin/rules'); const l
 $('#rule-form').addEventListener('submit', action(async () => { const patterns = {}; for (const arch of ['x64', 'arm64', 'x86']) patterns[arch] = $(`#rule-${arch}`).value; await api('/api/admin/rules', 'PUT', { repo: $('#rule-repo').value, patterns }); notice('规则已保存，生效和列表更新可能需要 60 秒或更久。'); await loadRules(); }));
 $('#reload-rules').addEventListener('click', action(loadRules));
 const beijing = value => new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(value));
-$('#key-duration').addEventListener('change', () => { const custom = $('#key-duration').value === 'custom'; $('#custom-end').hidden = !custom; $('#key-end').required = custom; });
+$('#key-duration').addEventListener('change', () => { const custom = $('#key-duration').value === 'custom'; $('#custom-end').hidden = !custom; $('#key-days').required = custom; });
 $('#key-form').addEventListener('submit', action(async () => {
-  const start = $('#key-start').value ? new Date(`${$('#key-start').value}:00+08:00`) : new Date();
-  const end = $('#key-duration').value === 'custom' ? new Date(`${$('#key-end').value}:00+08:00`) : new Date(start.getTime() + Number($('#key-duration').value) * 86400000);
-  const data = await api('/api/admin/keys', 'POST', { name: $('#key-name').value, startsAt: start.toISOString(), expiresAt: end.toISOString() });
+  const duration = $('#key-duration').value;
+  const durationDays = duration === 'permanent' ? null : Number(duration === 'custom' ? $('#key-days').value : duration);
+  const data = await api('/api/admin/keys', 'POST', { name: $('#key-name').value, durationDays });
   $('#created-key').hidden = false; $('#new-key').value = data.apiKey; notice('密钥已创建，请复制保存。首次使用可能需等待 KV 同步。'); await loadKeys();
 }));
 $('#copy-key').addEventListener('click', action(async () => { await navigator.clipboard.writeText($('#new-key').value); notice('已复制 API Key。'); }));
-async function loadKeys() { const data = await api('/api/admin/keys'); const list = $('#keys-list'); list.replaceChildren(); if (!data.keys.length) list.append(element('div', 'empty', '尚未创建 API 密钥。')); for (const key of data.keys) { const now = Date.now(); const state = !key.enabled ? '已停用' : now >= key.expiresAt ? '已到期' : now < key.startsAt ? '待生效' : '有效'; list.append(row(`${key.name} · ${state}`, `${beijing(key.startsAt)} → ${beijing(key.expiresAt)}（北京时间）`, [button(key.enabled ? '停用' : '启用', async () => { await api(`/api/admin/keys/${key.id}`, 'PATCH', { enabled: !key.enabled }); notice('状态已保存，可能延迟生效。'); await loadKeys(); }), button('删除', async () => { await api(`/api/admin/keys/${key.id}`, 'DELETE'); notice('密钥已删除，可能延迟生效。'); await loadKeys(); }, true)])); } }
+async function loadKeys() { const data = await api('/api/admin/keys'); const list = $('#keys-list'); list.replaceChildren(); if (!data.keys.length) list.append(element('div', 'empty', '尚未创建 API 密钥。')); for (const key of data.keys) { const now = Date.now(); const state = !key.enabled ? '已停用' : key.expiresAt !== null && now >= key.expiresAt ? '已到期' : now < key.startsAt ? '待生效' : '有效'; list.append(row(`${key.name} · ${state}`, `${beijing(key.startsAt)} → ${key.expiresAt === null ? '永久' : beijing(key.expiresAt)}（北京时间）`, [button(key.enabled ? '停用' : '启用', async () => { await api(`/api/admin/keys/${key.id}`, 'PATCH', { enabled: !key.enabled }); notice('状态已保存，可能延迟生效。'); await loadKeys(); }), button('删除', async () => { await api(`/api/admin/keys/${key.id}`, 'DELETE'); notice('密钥已删除，可能延迟生效。'); await loadKeys(); }, true)])); } }
 $('#reload-keys').addEventListener('click', action(loadKeys));
 loadRules().catch(error => notice(error.message, true));

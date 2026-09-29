@@ -117,6 +117,27 @@ test('access start and expiry boundaries enforced even with a populated cache', 
   assert.equal((await call(NOW + 1999)).status, 200);
   assert.equal((await (await call(NOW + 2000)).json() as any).error.code, 'API_KEY_EXPIRED'); assert.equal(f.calls(), 2);
 });
+test('duration keys start at server time and expire at the selected boundary', async () => {
+  const f = fixture(); const cookie = await f.login();
+  for (const days of [1, 7, 30, 360, 13]) {
+    const response = await f.request('/api/admin/keys', 'POST', { name: 'duration', durationDays: days }, { cookie });
+    assert.equal(response.status, 201);
+    const { apiKey, key } = await response.json() as { apiKey: string; key: { startsAt: number; expiresAt: number } };
+    assert.equal(key.startsAt, NOW); assert.equal(key.expiresAt, NOW + days * 86400000);
+    assert.equal((await f.request('/api/latest?repo=test/app', 'GET', undefined, { token: apiKey, now: NOW })).status, 200);
+    assert.equal((await f.request('/api/latest?repo=test/app', 'GET', undefined, { token: apiKey, now: key.expiresAt - 1 })).status, 200);
+    assert.equal((await f.request('/api/latest?repo=test/app', 'GET', undefined, { token: apiKey, now: key.expiresAt })).status, 403);
+  }
+});
+test('permanent keys remain active and invalid durations are rejected', async () => {
+  const f = fixture(); const cookie = await f.login();
+  const response = await f.request('/api/admin/keys', 'POST', { name: 'permanent', durationDays: null }, { cookie });
+  assert.equal(response.status, 201);
+  const { apiKey, key } = await response.json() as { apiKey: string; key: { expiresAt: null } };
+  assert.equal(key.expiresAt, null);
+  assert.equal((await f.request('/api/latest?repo=test/app', 'GET', undefined, { token: apiKey, now: NOW + 40000 * 86400000 })).status, 200);
+  for (const durationDays of [0, -1, 1.5, 36501, '30']) assert.equal((await f.request('/api/admin/keys', 'POST', { name: 'bad', durationDays }, { cookie })).status, 400);
+});
 test('disable, reenable and delete a key', async () => {
   const f = fixture(); const cookie = await f.login(); const key = await f.key(cookie); const path = `/api/admin/keys/${key.key.id}`;
   await f.request(path, 'PATCH', { enabled: false }, { cookie });

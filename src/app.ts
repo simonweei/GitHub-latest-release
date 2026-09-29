@@ -9,7 +9,7 @@ export interface Store {
 }
 export interface Env { APP_KV: Store; ADMIN_PASSWORD: string; MASTER_KEY: string }
 interface Settings { signingKey: string; githubToken: string }
-interface AccessKey { id: string; name: string; startsAt: number; expiresAt: number; enabled: boolean; createdAt: number }
+interface AccessKey { id: string; name: string; startsAt: number; expiresAt: number | null; enabled: boolean; createdAt: number }
 interface Cached { release?: Release; error?: { code: string; message: string }; checkedAt: number; retryAt?: number }
 interface Dependencies { now?: () => number; fetcher?: typeof fetch }
 const HOUR = 3600_000;
@@ -80,7 +80,7 @@ async function authorizeKey(request: Request, env: Env, now: number) {
   if (!key) throw new ApiError(401, 'INVALID_API_KEY', 'API Key 无效');
   if (!key.enabled) throw new ApiError(403, 'API_KEY_DISABLED', 'API Key 已停用');
   if (now < key.startsAt) throw new ApiError(403, 'API_KEY_NOT_ACTIVE', 'API Key 尚未生效');
-  if (now >= key.expiresAt) throw new ApiError(403, 'API_KEY_EXPIRED', 'API Key 已到期');
+  if (key.expiresAt !== null && now >= key.expiresAt) throw new ApiError(403, 'API_KEY_EXPIRED', 'API Key 已到期');
 }
 async function resolve(request: Request, env: Env, config: Settings, now: number, fetcher: typeof fetch, force = false) {
   const url = new URL(request.url);
@@ -169,8 +169,13 @@ export async function handle(request: Request, env: Env, next: () => Promise<Res
         requireMethod(request, 'POST'); const data = await body(request);
         const name = string(data.name, '名称', 1, 80).trim(); if (!name) throw new ApiError(400, 'INVALID_INPUT', '名称不能为空');
         const startsAt = data.startsAt ? date(data.startsAt, '生效时间') : now;
-        const expiresAt = date(data.expiresAt, '到期时间');
-        if (expiresAt <= startsAt || expiresAt <= now) throw new ApiError(400, 'INVALID_TIME', '到期时间必须晚于生效时间和当前时间');
+        let expiresAt: number | null;
+        if (data.durationDays === null) expiresAt = null;
+        else if (data.durationDays !== undefined) {
+          if (typeof data.durationDays !== 'number' || !Number.isInteger(data.durationDays) || data.durationDays < 1 || data.durationDays > 36500) throw new ApiError(400, 'INVALID_TIME', '有效期必须为 1–36500 天的整数');
+          expiresAt = startsAt + data.durationDays * DAY;
+        } else expiresAt = date(data.expiresAt, '到期时间');
+        if (expiresAt !== null && (expiresAt <= startsAt || expiresAt <= now)) throw new ApiError(400, 'INVALID_TIME', '到期时间必须晚于生效时间和当前时间');
         const apiKey = `gr_${randomSecret()}`; const id = await hash(apiKey);
         const key: AccessKey = { id, name, startsAt, expiresAt, enabled: true, createdAt: now };
         await env.APP_KV.put(`key:${id}`, JSON.stringify(key));
